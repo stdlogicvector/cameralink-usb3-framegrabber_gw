@@ -1,7 +1,7 @@
 # CameraLink USB3 Framegrabber
 
-![Framegrabber board with FPGA](framegrabber_fpga.png)
-![Framegrabber board with FX3 eval kit](framegrabber_with_fx3.png)
+![Framegrabber board with FPGA](doc/framegrabber_fpga.png)
+![Framegrabber board with FX3 eval kit](doc/framegrabber_with_fx3.png)
 
 ## Description
 
