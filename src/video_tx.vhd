@@ -62,7 +62,7 @@ begin
 		
 			when S_SOF =>
 				if FVAL_I = '1' then
-					state	<= S_SOL;
+					state  <= S_SOL;
 					FVAL_O <= '1';
 				else
 					FVAL_O <= '0';

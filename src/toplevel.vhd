@@ -11,9 +11,13 @@ entity USB3_FG is
 		BUILD			: integer := 0;			-- Set by TCL
 		TIMESTAMP		: integer := 0;			-- Set by TCL
 		
-		CL_INPUT_WIDTH		: integer := 8;
-		CL_INPUT_CHANNELS	: integer := 3;
-		CL_INVERT			: std_logic_vector(4 downto 0) := "11100";
+		CL_CHANNELS		: integer := 3;
+		CL_TAPS			: integer := 2;
+		CL_TAPWIDTH		: integer := 8;
+		CL_BITDEPTH		: integer := 16;
+		CL_INVERT		: std_logic_vector(4 downto 0) := "11100";
+		
+		SENSOR_BITDEPTH	: integer := 12;
 			
 		INVERT_CLK		: boolean := true;
 			
@@ -187,20 +191,16 @@ signal cl_uart_get_char		: std_logic_vector(7 downto 0) := (others => '0');
 signal cl_uart_get_empty	: std_logic;
 
 -- Cameralink
-constant CL_TAPS			: integer := 2;
-constant CL_TAPWIDTH		: integer := 8;
-constant CL_BITDEPTH		: integer := 16;
-
 signal cl_cc				: std_logic_vector(3 downto 0) := "0000";
 signal cl_dval				: std_logic;
 signal cl_lval				: std_logic;
 signal cl_fval				: std_logic;
 signal cl_spare				: std_logic;
-signal cl_data_int			: std_logic_vector((CL_INPUT_WIDTH*CL_INPUT_CHANNELS + 4)-1 downto 0) := (others => '0');
-signal cl_data_ext			: std_logic_vector((CL_INPUT_WIDTH*CL_INPUT_CHANNELS + 4)-1 downto 0) := (others => '0');
-signal cl_data				: std_logic_vector((CL_INPUT_WIDTH*CL_INPUT_CHANNELS + 4)-1 downto 0) := (others => '0');
+signal cl_data_int			: std_logic_vector((CL_TAPWIDTH*CL_CHANNELS + 4)-1 downto 0) := (others => '0');
+signal cl_data_ext			: std_logic_vector((CL_TAPWIDTH*CL_CHANNELS + 4)-1 downto 0) := (others => '0');
+signal cl_data				: std_logic_vector((CL_TAPWIDTH*CL_CHANNELS + 4)-1 downto 0) := (others => '0');
 
-signal cl_data_mapped		: std_logic_vector((CL_INPUT_WIDTH*CL_INPUT_CHANNELS + 0)-1 downto 0) := (others => '0');
+signal cl_data_mapped		: std_logic_vector((CL_TAPWIDTH*CL_CHANNELS + 0)-1 downto 0) := (others => '0');
 signal cl_data_unused		: std_logic_vector(79 downto cl_data_mapped'high+1);
 
 signal cl_clk				: std_logic_vector(2 downto 0);
@@ -302,15 +302,19 @@ DQ_O(31 downto 24)	<= DEBUG_O;
 -- DEBUG ----------------------------------------------------------------------
 
 DEBUG_O <= (
-	0		=> cl_lval,
-	1		=> rec_avail,
-	2		=> rec_empty,
-	3		=> cl_reg_1(1),
-	4		=> rec_lval,
+--	0		=> cl_fval,
+--	1		=> cl_dval,
+	0		=> rec_fval,
+	1		=> rec_lval,
+	2		=> tx_fval,
+	3		=> tx_lval,
+	4		=> roi_fval,
+	5		=> col_fval,
+--	4		=> rec_avail,
+--	5		=> rec_read,
+--	6		=> rec_empty,
 	
-	
-	5		=> cl_mux,
-	6		=> cl_in_frame_int,
+--	6		=> cl_in_frame_int,
 	7		=> cl_in_frame_ext,
 	others	=> '0'
 );
@@ -335,15 +339,15 @@ clk_gen : entity work.clk_gen
 generic map (
 	CLK_IN_PERIOD	=> 20.0,	-- 50MHz
 	DIFF_CLK_IN		=> false,
-	CLKFB_MULT		=> 20,
+	CLKFB_MULT		=> 16,
 	DIVCLK_DIVIDE	=> 1,
-	CLK_OUT_DIVIDE	=> ( 0 => 10,   1 => 12,  others => 1 )
+	CLK_OUT_DIVIDE	=> ( 0 => 8,   1 => 10,  others => 1 )
 )
 port map (
 	CLK_Ip			=> CLK_I,
 	
-	CLK0_O			=> clk100,		-- 50MHz * 20 / 10 = 100MHz
-	CLK1_O			=> clk_cl_int,	-- 50MHz * 20 / 12 = 83.3MHz
+	CLK0_O			=> clk100,		-- 50MHz * 16 /  8 = 100.0MHz
+	CLK1_O			=> clk_cl_int,	-- 50MHz * 16 / 10 =  80.0MHz
 	
 	LOCKED_O		=> clk_ready
 );
@@ -564,7 +568,7 @@ port map (
 
 video_color : entity work.video_color
 generic map (
-	DEPTH		=> CL_BITDEPTH
+	DEPTH		=> SENSOR_BITDEPTH
 )
 port map (
 	CLK_I		=> clk100,
